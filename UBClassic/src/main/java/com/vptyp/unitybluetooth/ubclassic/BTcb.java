@@ -76,6 +76,22 @@ public class BTcb implements BluetoothCallback, DiscoveryCallback, DeviceCallbac
     }
 
     /**
+     * Disconnects from the device
+     */
+    @SuppressLint("MissingPermission")
+    public void disconnect() {
+        checkPermissions(UnityPlayer.currentActivity.getApplicationContext(),
+                UnityPlayer.currentActivity);
+        bluetooth.disconnect();
+        sendToUnity(new DataBridge("DisconnectingDevice"){
+            {
+                this.device = deviceAddress;
+                this.name = deviceName;
+            }
+        });
+    }
+
+    /**
      * Connects to the device by address
      * @param address address in format XX:XX:XX:XX:XX:XX
      */
@@ -83,7 +99,7 @@ public class BTcb implements BluetoothCallback, DiscoveryCallback, DeviceCallbac
     public void connectAddress(String address) {
         checkPermissions(UnityPlayer.currentActivity.getApplicationContext(),
                 UnityPlayer.currentActivity);
-        bluetooth.connectToAddress(address);
+        bluetooth.connectToAddress(address, true, false);
         sendToUnity(new DataBridge("StartingConnectionByAddress"){
             {
                 this.device = address;
@@ -181,10 +197,16 @@ public class BTcb implements BluetoothCallback, DiscoveryCallback, DeviceCallbac
     BTcb() {
         checkPermissions(UnityPlayer.currentActivity.getApplicationContext(),
                 UnityPlayer.currentActivity);
-        bluetooth = new Bluetooth(UnityPlayer.currentActivity);
+        bluetooth = new Bluetooth(UnityPlayer.currentActivity.getApplicationContext());
         bluetooth.setBluetoothCallback(this);
         bluetooth.setDiscoveryCallback(this);
         bluetooth.setDeviceCallback(this);
+
+        foundedDevices = new HashMap<String, BluetoothDevice>();
+        NameToAddress = new HashMap<String, String>();
+
+        bluetooth.onStart();
+        bluetooth.enable();
     }
 
     /**
