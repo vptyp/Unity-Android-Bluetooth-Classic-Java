@@ -26,16 +26,18 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.Manifest;
 import android.os.Build;
-import android.provider.ContactsContract;
+import java.util.ArrayList;
 import java.util.HashMap;
+
 public class BTcb implements BluetoothCallback, DiscoveryCallback, DeviceCallback {
 
     private static BTcb mInstance = null;
     private Bluetooth bluetooth;
     private BluetoothDevice bluetoothDevice;
 
-    private HashMap<String, BluetoothDevice> foundedDevices;
-    private HashMap<String, String> NameToAddress;
+    public ArrayList<String> _messages;
+    private final HashMap<String, BluetoothDevice> foundedDevices;
+    private final HashMap<String, String> NameToAddress;
     private String deviceAddress = null;
     private String deviceName = null;
 
@@ -59,6 +61,17 @@ public class BTcb implements BluetoothCallback, DiscoveryCallback, DeviceCallbac
         return mInstance;
     }
 
+    private void addToQueue(String message){
+        _messages.add(message);
+    }
+
+    public String[] getMessages(){
+        return _messages.toArray(new String[0]);
+    }
+
+    public void clearQueue(){
+        _messages.clear();
+    }
     /**
      * Connects to the device by name
      * @param name the name of the device
@@ -188,8 +201,6 @@ public class BTcb implements BluetoothCallback, DiscoveryCallback, DeviceCallbac
         sendToUnity(new DataBridge("StoppingScanning"));
     }
 
-
-
     /**
      * Constructor for UnityBluetooth
      * Enables bluetooth and creates instances
@@ -204,6 +215,7 @@ public class BTcb implements BluetoothCallback, DiscoveryCallback, DeviceCallbac
 
         foundedDevices = new HashMap<String, BluetoothDevice>();
         NameToAddress = new HashMap<String, String>();
+        _messages = new ArrayList<String>();
 
         bluetooth.onStart();
         bluetooth.enable();
@@ -228,16 +240,18 @@ public class BTcb implements BluetoothCallback, DiscoveryCallback, DeviceCallbac
     }
 
     public static Boolean checkPermissions(Context context, Activity activity) {
-        if (context.checkSelfPermission(Manifest.permission.BLUETOOTH) != PackageManager.PERMISSION_GRANTED
-                || context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                || context.checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED
-                || context.checkSelfPermission(Manifest.permission.BLUETOOTH_ADMIN) != PackageManager.PERMISSION_GRANTED
-                || context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            activity.requestPermissions(new String[]{Manifest.permission.BLUETOOTH,
-                                                    Manifest.permission.BLUETOOTH_ADMIN,
-                                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                                    Manifest.permission.BLUETOOTH_SCAN,
-                                                    Manifest.permission.BLUETOOTH_CONNECT}, 1);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (context.checkSelfPermission(Manifest.permission.BLUETOOTH) != PackageManager.PERMISSION_GRANTED
+                    || context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                    || context.checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED
+                    || context.checkSelfPermission(Manifest.permission.BLUETOOTH_ADMIN) != PackageManager.PERMISSION_GRANTED
+                    || context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                activity.requestPermissions(new String[]{Manifest.permission.BLUETOOTH,
+                                                        Manifest.permission.BLUETOOTH_ADMIN,
+                                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                                        Manifest.permission.BLUETOOTH_SCAN,
+                                                        Manifest.permission.BLUETOOTH_CONNECT}, 1);
+            }
         }
         return Boolean.TRUE;
     }
@@ -315,8 +329,8 @@ public class BTcb implements BluetoothCallback, DiscoveryCallback, DeviceCallbac
         output.data = new String(message);
         output.name = deviceName;
         output.device = deviceAddress;
-
-        UnityPlayer.UnitySendMessage(mUnityBlueReceiver, mUnityBlueCommand, output.toJson());
+        addToQueue(output.toJson());
+        //UnityPlayer.UnitySendMessage(mUnityBlueReceiver, mUnityBlueCommand, output.toJson());
     }
     @Override
     @SuppressLint("MissingPermission")
